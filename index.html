@@ -5,20 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ServiceMinder ROI Calculator</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
+    /* ============ Reset & Variables ============ */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
       --bg: #f4f6f9;
       --card: #ffffff;
       --primary: #4f46e5;
+      --primary-dark: #4338ca;
       --primary-light: #e0e7ff;
       --text: #1e293b;
       --text-muted: #64748b;
       --border: #e2e8f0;
       --green: #10b981;
+      --green-light: #d1fae5;
       --red: #ef4444;
+      --red-light: #fee2e2;
+      --blue: #3b82f6;
+      --blue-light: #dbeafe;
+      --amber: #f59e0b;
+      --amber-light: #fef3c7;
       --radius: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
     }
 
     body {
@@ -29,66 +40,88 @@
       min-height: 100vh;
     }
 
+    /* ============ Layout ============ */
     header {
-      background: var(--primary);
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
       color: white;
-      padding: 2rem 1rem;
+      padding: 2.5rem 1rem 2rem;
       text-align: center;
     }
-
     header h1 { font-size: 1.75rem; font-weight: 700; }
     header p { opacity: 0.85; margin-top: 0.25rem; font-size: 0.95rem; }
 
-    .container {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 2rem 1rem;
-    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; }
 
-    .grid {
+    /* ============ Input Grid (3 columns) ============ */
+    .input-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 2rem;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
     }
 
-    @media (max-width: 768px) {
-      .grid { grid-template-columns: 1fr; }
+    @media (max-width: 1024px) {
+      .input-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 700px) {
+      .input-grid { grid-template-columns: 1fr; }
     }
 
     .card {
       background: var(--card);
       border-radius: var(--radius);
-      padding: 1.75rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
     }
 
     .card h2 {
-      font-size: 1.1rem;
+      font-size: 0.95rem;
       font-weight: 600;
-      margin-bottom: 1.25rem;
+      margin-bottom: 1.1rem;
       color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
 
-    .field { margin-bottom: 1rem; }
+    .field { margin-bottom: 0.9rem; }
+    .field:last-child { margin-bottom: 0; }
 
     .field label {
       display: block;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-weight: 500;
-      color: var(--text-muted);
-      margin-bottom: 0.3rem;
+      color: var(--text);
+      margin-bottom: 0.25rem;
     }
 
-    .field input {
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .input-wrap .prefix,
+    .input-wrap .suffix {
+      position: absolute;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      pointer-events: none;
+      font-weight: 500;
+    }
+    .input-wrap .prefix { left: 0.7rem; }
+    .input-wrap .suffix { right: 0.7rem; }
+
+    .field input[type="number"] {
       width: 100%;
-      padding: 0.6rem 0.75rem;
+      padding: 0.55rem 0.7rem;
       border: 1.5px solid var(--border);
       border-radius: 8px;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       color: var(--text);
-      transition: border-color 0.2s;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      background: #fff;
     }
-
+    .field .input-wrap input.has-prefix { padding-left: 1.6rem; }
+    .field .input-wrap input.has-suffix { padding-right: 2rem; }
     .field input:focus {
       outline: none;
       border-color: var(--primary);
@@ -96,322 +129,991 @@
     }
 
     .hint {
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: var(--text-muted);
-      margin-top: 0.2rem;
+      margin-top: 0.15rem;
+      line-height: 1.3;
     }
 
-    button.calc-btn {
-      width: 100%;
-      padding: 0.75rem;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 600;
+    /* Toggle switch */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+    }
+    .toggle-row .toggle-label {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle .slider {
+      position: absolute;
+      inset: 0;
+      background: #cbd5e1;
+      border-radius: 12px;
       cursor: pointer;
-      margin-top: 0.5rem;
       transition: background 0.2s;
     }
+    .toggle .slider::before {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      left: 3px;
+      top: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle input:checked + .slider { background: var(--primary); }
+    .toggle input:checked + .slider::before { transform: translateX(20px); }
 
-    button.calc-btn:hover { background: #4338ca; }
+    /* ============ Summary Banner ============ */
+    .summary-banner {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      border-radius: var(--radius);
+      padding: 2rem 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow-md);
+    }
+    .summary-banner .summary-kpi {
+      text-align: center;
+      color: white;
+    }
+    .summary-banner .summary-value {
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .summary-banner .summary-label {
+      font-size: 0.8rem;
+      opacity: 0.85;
+      margin-top: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
 
-    /* Results */
-    .results { margin-top: 2rem; }
+    @media (max-width: 600px) {
+      .summary-banner {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        padding: 1.5rem 1rem;
+      }
+      .summary-banner .summary-value { font-size: 1.6rem; }
+    }
+
+    /* ============ Tier Sections ============ */
+    .tier-section {
+      margin-bottom: 1.5rem;
+    }
+    .tier-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      padding-left: 0.75rem;
+      border-left: 4px solid var(--border);
+    }
+    .tier-header h3 {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .tier-header .tier-badge {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .tier-section.tier-1 .tier-header { border-left-color: var(--green); }
+    .tier-section.tier-1 .tier-badge { background: var(--green-light); color: #065f46; }
+
+    .tier-section.tier-2 .tier-header { border-left-color: var(--blue); }
+    .tier-section.tier-2 .tier-badge { background: var(--blue-light); color: #1e40af; }
+
+    .tier-section.tier-3 .tier-header { border-left-color: var(--amber); }
+    .tier-section.tier-3 .tier-badge { background: var(--amber-light); color: #92400e; }
 
     .kpi-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 1rem;
-      margin-bottom: 2rem;
     }
-
     .kpi {
       background: var(--card);
       border-radius: var(--radius);
-      padding: 1.25rem;
+      padding: 1.1rem;
       text-align: center;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      box-shadow: var(--shadow);
     }
-
-    .kpi .value {
-      font-size: 1.6rem;
+    .kpi .kpi-value {
+      font-size: 1.4rem;
       font-weight: 700;
-      margin-bottom: 0.15rem;
+      margin-bottom: 0.1rem;
     }
-
-    .kpi .label {
-      font-size: 0.8rem;
+    .kpi .kpi-label {
+      font-size: 0.75rem;
       color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.03em;
     }
 
-    .kpi.positive .value { color: var(--green); }
-    .kpi.negative .value { color: var(--red); }
+    .kpi.green .kpi-value { color: var(--green); }
+    .kpi.blue .kpi-value { color: var(--blue); }
+    .kpi.amber .kpi-value { color: var(--amber); }
 
+    /* ============ Scalability Gauge ============ */
+    .scalability-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .scalability-card .gauge-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 0.75rem;
+    }
+    .gauge-bar {
+      width: 100%;
+      height: 12px;
+      background: #e2e8f0;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+    .gauge-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.6s ease, background 0.3s;
+    }
+    .gauge-score {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 0.1rem;
+    }
+    .gauge-rating {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    /* ============ Charts ============ */
     .charts-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 2rem;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
     }
-
     @media (max-width: 768px) {
       .charts-grid { grid-template-columns: 1fr; }
     }
-
     .chart-card {
       background: var(--card);
       border-radius: var(--radius);
-      padding: 1.5rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
     }
-
     .chart-card h3 {
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       font-weight: 600;
-      margin-bottom: 1rem;
+      margin-bottom: 0.75rem;
       color: var(--text);
     }
 
-    .hidden { display: none; }
+    /* ============ Detailed Breakdown ============ */
+    .breakdown-section {
+      margin-bottom: 1.5rem;
+    }
+    .breakdown-section details {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .breakdown-section summary {
+      padding: 1rem 1.25rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--primary);
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .breakdown-section summary::before {
+      content: '\25B6';
+      font-size: 0.65rem;
+      transition: transform 0.2s;
+    }
+    .breakdown-section details[open] summary::before {
+      transform: rotate(90deg);
+    }
+    .breakdown-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    .breakdown-table th {
+      text-align: left;
+      padding: 0.6rem 1.25rem;
+      background: var(--bg);
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .breakdown-table td {
+      padding: 0.55rem 1.25rem;
+      border-top: 1px solid var(--border);
+    }
+    .breakdown-table tr:nth-child(even) td { background: #fafbfc; }
+    .breakdown-table .row-total td {
+      font-weight: 700;
+      border-top: 2px solid var(--primary);
+      background: var(--primary-light);
+    }
+    .breakdown-table .row-tier td {
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: var(--bg);
+      padding-top: 0.75rem;
+    }
+    .breakdown-table .val { text-align: right; font-variant-numeric: tabular-nums; }
+    .breakdown-table .basis { color: var(--text-muted); font-size: 0.75rem; }
+
+    /* ============ Action Buttons ============ */
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 0.65rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-secondary {
+      background: white;
+      color: var(--text);
+      border: 1.5px solid var(--border);
+    }
+    .btn-secondary:hover { background: var(--bg); }
+
+    /* ============ Hobson Note ============ */
+    .hobson-note {
+      background: #fefefe;
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .hobson-note h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+    .hobson-note ul {
+      list-style: none;
+      padding: 0;
+    }
+    .hobson-note li {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      padding: 0.15rem 0;
+      padding-left: 1.1rem;
+      position: relative;
+    }
+    .hobson-note li::before {
+      content: '\2022';
+      position: absolute;
+      left: 0;
+      color: var(--border);
+    }
+    .hobson-note .hobson-footnote {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-top: 0.6rem;
+      border-top: 1px solid var(--border);
+      padding-top: 0.5rem;
+    }
+
+    /* ============ Footer ============ */
+    .footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* ============ Hidden ============ */
+    .hidden { display: none !important; }
+
+    /* ============ Print / PDF ============ */
+    .pdf-only { display: none; }
+
+    @media print {
+      body { background: white; }
+      header, .input-grid, .actions, .footer { display: none; }
+      .summary-banner { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .pdf-only { display: block; }
+      .card, .kpi, .chart-card, .scalability-card { box-shadow: none; border: 1px solid #e2e8f0; }
+      .breakdown-section details { open: true; }
+      .breakdown-section details[open] { break-inside: avoid; }
+    }
   </style>
 </head>
 <body>
+
+  <!-- ============ Header ============ -->
   <header>
     <h1>ServiceMinder ROI Calculator</h1>
-    <p>Estimate the return on investment of switching to ServiceMinder</p>
+    <p>Build your franchise growth case — together</p>
   </header>
 
   <div class="container">
-    <div class="grid">
-      <!-- Current Costs -->
+
+    <!-- ============ Input Section: 3 Buckets ============ -->
+    <div class="input-grid">
+
+      <!-- Bucket 1: Network Profile -->
       <div class="card">
-        <h2>Current Costs</h2>
+        <h2>Network Profile</h2>
         <div class="field">
-          <label for="numEmployees">Number of Employees / Users</label>
-          <input type="number" id="numEmployees" value="10" min="1">
+          <label for="numLocations">Current Franchise Locations</label>
+          <input type="number" id="numLocations" value="25" min="1" step="1">
         </div>
         <div class="field">
-          <label for="hoursPerWeek">Hours Spent per User per Week</label>
-          <input type="number" id="hoursPerWeek" value="5" min="0" step="0.5">
-          <div class="hint">On the task ServiceMinder would automate or streamline</div>
+          <label for="newLocations">New Locations Projected (12 mo)</label>
+          <input type="number" id="newLocations" value="8" min="0" step="1">
+          <div class="hint">Planned openings in the next 12 months</div>
         </div>
         <div class="field">
-          <label for="hourlyRate">Average Hourly Cost ($)</label>
-          <input type="number" id="hourlyRate" value="50" min="0" step="1">
-          <div class="hint">Fully loaded employee cost (salary + benefits + overhead)</div>
-        </div>
-        <div class="field">
-          <label for="currentToolCost">Current Tool / Process Cost ($/month)</label>
-          <input type="number" id="currentToolCost" value="500" min="0" step="10">
-          <div class="hint">Existing software licenses, maintenance, etc.</div>
+          <label for="monthlyTechSpend">Total Monthly Tech Spend</label>
+          <div class="input-wrap">
+            <span class="prefix">$</span>
+            <input type="number" id="monthlyTechSpend" value="4500" min="0" step="100" class="has-prefix">
+          </div>
+          <div class="hint">All software licenses, platforms, and tools combined</div>
         </div>
       </div>
 
-      <!-- ServiceMinder Costs -->
+      <!-- Bucket 2: Franchisee Operations -->
       <div class="card">
-        <h2>ServiceMinder</h2>
+        <h2>Franchisee Operations</h2>
         <div class="field">
-          <label for="saasMonthly">ServiceMinder Subscription ($/month)</label>
-          <input type="number" id="saasMonthly" value="2000" min="0" step="10">
+          <label for="adminHoursWeek">Admin Hours / Franchisee / Week</label>
+          <input type="number" id="adminHoursWeek" value="15" min="0" step="1">
+          <div class="hint">Scheduling, invoicing, reminders, routing, customer calls</div>
         </div>
         <div class="field">
-          <label for="implementationCost">One-Time Implementation Cost ($)</label>
-          <input type="number" id="implementationCost" value="5000" min="0" step="100">
-          <div class="hint">Setup, migration, training, consulting fees</div>
+          <label for="loadedCostHour">Loaded Cost per Hour</label>
+          <div class="input-wrap">
+            <span class="prefix">$</span>
+            <input type="number" id="loadedCostHour" value="28" min="0" step="1" class="has-prefix">
+          </div>
+          <div class="hint">Blended rate including salary, benefits, overhead</div>
         </div>
         <div class="field">
-          <label for="timeSavedPct">Estimated Time Savings (%)</label>
-          <input type="number" id="timeSavedPct" value="60" min="0" max="100" step="5">
-          <div class="hint">How much of the current manual time will ServiceMinder eliminate?</div>
+          <label for="recurringRate">Recurring Customer Rate</label>
+          <div class="input-wrap">
+            <input type="number" id="recurringRate" value="35" min="0" max="100" step="1" class="has-suffix">
+            <span class="suffix">%</span>
+          </div>
+          <div class="hint">Percentage of revenue from repeat customers</div>
         </div>
         <div class="field">
-          <label for="timeframe">Analysis Timeframe (months)</label>
-          <input type="number" id="timeframe" value="12" min="1" max="60" step="1">
+          <label for="avgRevenue">Avg Annual Revenue / Location</label>
+          <div class="input-wrap">
+            <span class="prefix">$</span>
+            <input type="number" id="avgRevenue" value="650000" min="0" step="10000" class="has-prefix">
+          </div>
         </div>
-        <button class="calc-btn" onclick="calculate()">Calculate ROI</button>
+      </div>
+
+      <!-- Bucket 3: Franchisor-Level Operations -->
+      <div class="card">
+        <h2>Franchisor Operations</h2>
+        <div class="field">
+          <label for="corpDataHours">Corporate Staff Hrs / Week on Data</label>
+          <input type="number" id="corpDataHours" value="20" min="0" step="1">
+          <div class="hint">Managing data across disconnected systems</div>
+        </div>
+        <div class="field">
+          <label for="onboardWeeks">Weeks to Onboard New Franchisee</label>
+          <input type="number" id="onboardWeeks" value="8" min="1" step="1">
+          <div class="hint">Onto current tech stack, fully operational</div>
+        </div>
+        <div class="field">
+          <label for="supportTickets">Support Tickets / Month (Tech/Ops)</label>
+          <input type="number" id="supportTickets" value="45" min="0" step="1">
+          <div class="hint">Franchisee escalations related to tech or ops</div>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">Royalty Collection is Manual</span>
+          <label class="toggle">
+            <input type="checkbox" id="royaltyManual" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
       </div>
     </div>
 
-    <!-- Results Section -->
-    <div id="results" class="results hidden">
-      <div class="kpi-grid">
-        <div class="kpi" id="kpiROI"><div class="value">—</div><div class="label">ROI</div></div>
-        <div class="kpi" id="kpiSavings"><div class="value">—</div><div class="label">Net Savings</div></div>
-        <div class="kpi" id="kpiPayback"><div class="value">—</div><div class="label">Payback Period</div></div>
-        <div class="kpi" id="kpiTimeSaved"><div class="value">—</div><div class="label">Hours Saved / Year</div></div>
+    <!-- ============ Results Section ============ -->
+    <div id="results">
+
+      <!-- Summary Banner -->
+      <div class="summary-banner" id="summaryBanner">
+        <div class="summary-kpi">
+          <div class="summary-value" id="sumHours">--</div>
+          <div class="summary-label">Admin Hours Saved / Year</div>
+        </div>
+        <div class="summary-kpi">
+          <div class="summary-value" id="sumDollars">--</div>
+          <div class="summary-label">Annual Hard-Dollar Savings</div>
+        </div>
+        <div class="summary-kpi">
+          <div class="summary-value" id="sumROI">--</div>
+          <div class="summary-label">3-Year Net ROI</div>
+        </div>
       </div>
 
+      <!-- Tier 1: Hard Dollar Savings -->
+      <div class="tier-section tier-1">
+        <div class="tier-header">
+          <h3>Hard Dollar Savings</h3>
+          <span class="tier-badge">Tier 1</span>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi green">
+            <div class="kpi-value" id="t1Hours">--</div>
+            <div class="kpi-label">Admin Hours Saved / Year</div>
+          </div>
+          <div class="kpi green">
+            <div class="kpi-value" id="t1TimeDollars">--</div>
+            <div class="kpi-label">Value of Time Saved</div>
+          </div>
+          <div class="kpi green">
+            <div class="kpi-value" id="t1TechSavings">--</div>
+            <div class="kpi-label">Tech Consolidation Savings</div>
+          </div>
+          <div class="kpi green">
+            <div class="kpi-value" id="t1OnboardSavings">--</div>
+            <div class="kpi-label">Onboarding Cost Reduction</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tier 2: Revenue Protection & Growth -->
+      <div class="tier-section tier-2">
+        <div class="tier-header">
+          <h3>Revenue Protection &amp; Growth</h3>
+          <span class="tier-badge">Tier 2</span>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi blue">
+            <div class="kpi-value" id="t2RecurringRisk">--</div>
+            <div class="kpi-label">Recurring Revenue at Risk</div>
+          </div>
+          <div class="kpi blue">
+            <div class="kpi-value" id="t2LeadConversion">--</div>
+            <div class="kpi-label">Lead Conversion Improvement</div>
+          </div>
+          <div class="kpi blue">
+            <div class="kpi-value" id="t2RampLift">--</div>
+            <div class="kpi-label">Revenue Lift (Faster Ramp)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tier 3: Strategic & Investor-Facing -->
+      <div class="tier-section tier-3">
+        <div class="tier-header">
+          <h3>Strategic &amp; Investor-Facing</h3>
+          <span class="tier-badge">Tier 3</span>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi amber">
+            <div class="kpi-value" id="t3Payback">--</div>
+            <div class="kpi-label">Payback Period</div>
+          </div>
+          <div class="kpi amber">
+            <div class="kpi-value" id="t3ROI">--</div>
+            <div class="kpi-label">3-Year Net ROI</div>
+          </div>
+          <div class="scalability-card">
+            <div class="gauge-label">Scalability Readiness</div>
+            <div class="gauge-bar"><div class="gauge-fill" id="gaugeFill"></div></div>
+            <div class="gauge-score" id="gaugeScore">--</div>
+            <div class="gauge-rating" id="gaugeRating">--</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts -->
       <div class="charts-grid">
         <div class="chart-card">
-          <h3>Cumulative Cost Comparison</h3>
+          <h3>Cumulative Cost: Current Stack vs. ServiceMinder (36 mo)</h3>
           <canvas id="costChart"></canvas>
         </div>
         <div class="chart-card">
-          <h3>Monthly Savings</h3>
+          <h3>Monthly Net Benefit</h3>
           <canvas id="savingsChart"></canvas>
         </div>
       </div>
-    </div>
-  </div>
 
+      <!-- Detailed Breakdown -->
+      <div class="breakdown-section">
+        <details>
+          <summary>View Detailed Breakdown</summary>
+          <table class="breakdown-table" id="breakdownTable">
+            <thead>
+              <tr>
+                <th>Line Item</th>
+                <th class="val">Annual Value</th>
+                <th class="basis">Calculation Basis</th>
+              </tr>
+            </thead>
+            <tbody id="breakdownBody"></tbody>
+          </table>
+        </details>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="actions">
+        <button class="btn btn-primary" onclick="shareResults()">Share Results (PDF)</button>
+        <button class="btn btn-secondary" onclick="resetDefaults()">Reset to Defaults</button>
+      </div>
+
+      <!-- Hobson Note -->
+      <div class="hobson-note">
+        <h4>What's Not Included in This Estimate</h4>
+        <ul>
+          <li>Brand equity from a unified customer experience across all locations</li>
+          <li>Reduced franchisee churn from better operational support</li>
+          <li>Data-driven territory planning and market optimization</li>
+          <li>Compliance and audit readiness for PE/lender due diligence</li>
+          <li>Customer lifetime value improvements from automated follow-up</li>
+          <li>Competitive advantage from faster market response</li>
+        </ul>
+        <p class="hobson-footnote">These factors are real but difficult to quantify precisely. In our experience, they often exceed the hard-dollar savings shown above. Available upon request.</p>
+      </div>
+
+    </div><!-- /results -->
+  </div><!-- /container -->
+
+  <div class="footer">ServiceMinder &mdash; The Operating System for Service Franchises</div>
+
+  <!-- ============ JavaScript ============ -->
   <script>
+    // --- Benchmark Constants ---
+    const SM_ADMIN_REDUCTION = 0.60;
+    const SM_ONBOARD_REDUCTION = 0.65;
+    const SM_SUPPORT_REDUCTION = 0.50;
+    const SM_RECURRING_LIFT = 0.15;
+    const SM_LEAD_CONVERSION_LIFT = 0.10;
+    const SM_RAMP_SAVINGS = 0.50;
+    const SM_CORP_DATA_REDUCTION = 0.70;
+    const CORP_HOURLY_RATE = 55;
+    const SM_ANNUAL_COST_PER_LOCATION = 3000;
+    const SUPPORT_COST_PER_TICKET = 35;
+    const ROYALTY_PROCESSING_HOURS_MONTH = 12;
+    const WEEKS_PER_YEAR = 52;
+    const MONTHS_PER_YEAR = 12;
+
+    // --- Default Values ---
+    const DEFAULTS = {
+      numLocations: 25,
+      newLocations: 8,
+      monthlyTechSpend: 4500,
+      adminHoursWeek: 15,
+      loadedCostHour: 28,
+      recurringRate: 35,
+      avgRevenue: 650000,
+      corpDataHours: 20,
+      onboardWeeks: 8,
+      supportTickets: 45,
+      royaltyManual: true
+    };
+
+    // --- Utility ---
+    function $(id) { return document.getElementById(id); }
+    function num(id) { return parseFloat($(id).value) || 0; }
+    function fmt(n) {
+      if (Math.abs(n) >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
+      if (Math.abs(n) >= 1000) return '$' + Math.round(n).toLocaleString('en-US');
+      return '$' + Math.round(n).toLocaleString('en-US');
+    }
+    function fmtFull(n) { return '$' + Math.round(n).toLocaleString('en-US'); }
+    function fmtNum(n) { return Math.round(n).toLocaleString('en-US'); }
+    function fmtPct(n) { return Math.round(n) + '%'; }
+
+    // --- Chart instances ---
     let costChart = null;
     let savingsChart = null;
 
-    function $(id) { return document.getElementById(id); }
-    function num(id) { return parseFloat($(id).value) || 0; }
-    function fmt(n) { return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }); }
-
-    function setKPI(id, value, label, cls) {
-      const el = $(id);
-      el.querySelector('.value').textContent = value;
-      if (label) el.querySelector('.label').textContent = label;
-      el.className = 'kpi' + (cls ? ' ' + cls : '');
-    }
-
+    // --- Calculation Engine ---
     function calculate() {
-      const employees = num('numEmployees');
-      const hoursPerWeek = num('hoursPerWeek');
-      const hourlyRate = num('hourlyRate');
-      const currentToolCost = num('currentToolCost');
-      const saasMonthly = num('saasMonthly');
-      const implementationCost = num('implementationCost');
-      const timeSavedPct = num('timeSavedPct') / 100;
-      const months = Math.max(1, Math.round(num('timeframe')));
+      const numLocations = Math.max(1, num('numLocations'));
+      const newLocations = num('newLocations');
+      const monthlyTechSpend = num('monthlyTechSpend');
+      const adminHoursWeek = num('adminHoursWeek');
+      const loadedCostHour = num('loadedCostHour');
+      const recurringRate = num('recurringRate') / 100;
+      const avgRevenue = num('avgRevenue');
+      const corpDataHours = num('corpDataHours');
+      const onboardWeeks = num('onboardWeeks');
+      const supportTickets = num('supportTickets');
+      const royaltyManual = $('royaltyManual').checked;
 
-      // Monthly labor cost currently spent on the task
-      const weeksPerMonth = 52 / 12;
-      const monthlyLaborCost = employees * hoursPerWeek * hourlyRate * weeksPerMonth;
+      // === Tier 1: Hard Dollar Savings ===
 
-      // Monthly labor saved
-      const monthlyLaborSaved = monthlyLaborCost * timeSavedPct;
+      // 1. Annual admin hours saved
+      const adminHoursSaved = numLocations * adminHoursWeek * SM_ADMIN_REDUCTION * WEEKS_PER_YEAR;
 
-      // Monthly cost: current vs. SaaS
-      const monthlyCurrentTotal = monthlyLaborCost + currentToolCost;
-      const monthlySaaSTotal = (monthlyLaborCost - monthlyLaborSaved) + saasMonthly;
+      // 2. Dollar value of time saved (admin + corporate)
+      const adminDollarsSaved = adminHoursSaved * loadedCostHour;
+      const corpHoursSaved = corpDataHours * SM_CORP_DATA_REDUCTION * WEEKS_PER_YEAR;
+      const corpDollarsSaved = corpHoursSaved * CORP_HOURLY_RATE;
+      const totalTimeDollarsSaved = adminDollarsSaved + corpDollarsSaved;
 
-      // Net monthly savings
-      const monthlySavings = monthlyCurrentTotal - monthlySaaSTotal;
+      // 3. Tech consolidation savings
+      const smAnnualCost = numLocations * SM_ANNUAL_COST_PER_LOCATION;
+      const techConsolidationSavings = Math.max(0, (monthlyTechSpend * MONTHS_PER_YEAR) - smAnnualCost);
 
-      // Build month-by-month data
-      const labels = [];
-      const cumCurrent = [];
-      const cumSaaS = [];
-      const monthlySavingsData = [];
-      let totalCurrentCost = 0;
-      let totalSaaSCost = implementationCost;
+      // 4. Onboarding cost reduction
+      const currentOnboardCost = onboardWeeks * 40 * CORP_HOURLY_RATE;
+      const smOnboardCost = currentOnboardCost * (1 - SM_ONBOARD_REDUCTION);
+      const onboardSavingsPerLocation = currentOnboardCost - smOnboardCost;
+      const totalOnboardSavings = onboardSavingsPerLocation * newLocations;
 
-      for (let m = 1; m <= months; m++) {
-        labels.push('Mo ' + m);
-        totalCurrentCost += monthlyCurrentTotal;
-        totalSaaSCost += monthlySaaSTotal;
-        cumCurrent.push(Math.round(totalCurrentCost));
-        cumSaaS.push(Math.round(totalSaaSCost));
-        monthlySavingsData.push(Math.round(monthlySavings));
-      }
+      // Support ticket savings (included in hard dollars)
+      const ticketSavings = supportTickets * SM_SUPPORT_REDUCTION * SUPPORT_COST_PER_TICKET * MONTHS_PER_YEAR;
 
-      const totalInvestment = implementationCost + (saasMonthly * months);
-      const netSavings = totalCurrentCost - totalSaaSCost;
-      const roi = totalInvestment > 0 ? (netSavings / totalInvestment) * 100 : 0;
+      // Royalty processing savings
+      const royaltySavings = royaltyManual ? ROYALTY_PROCESSING_HOURS_MONTH * CORP_HOURLY_RATE * MONTHS_PER_YEAR : 0;
 
-      // Payback period (months to recoup implementation cost)
-      let paybackMonths = monthlySavings > 0 ? implementationCost / monthlySavings : Infinity;
+      // Total hard dollar savings
+      const totalHardDollar = totalTimeDollarsSaved + techConsolidationSavings + totalOnboardSavings + ticketSavings + royaltySavings;
 
-      // Hours saved
-      const hoursSavedPerYear = employees * hoursPerWeek * timeSavedPct * 52;
+      // === Tier 2: Revenue Protection & Growth ===
 
-      // Update KPIs
-      setKPI('kpiROI', roi.toFixed(0) + '%', 'ROI', roi >= 0 ? 'positive' : 'negative');
-      setKPI('kpiSavings', fmt(netSavings), `Net Savings (${months}mo)`, netSavings >= 0 ? 'positive' : 'negative');
+      const totalNetworkRevenue = numLocations * avgRevenue;
 
-      if (paybackMonths === Infinity || paybackMonths < 0) {
-        setKPI('kpiPayback', 'N/A', 'Payback Period', 'negative');
-      } else if (paybackMonths <= 1) {
-        setKPI('kpiPayback', '< 1 month', 'Payback Period', 'positive');
+      // 5. Recurring revenue at risk
+      const recurringRevenueAtRisk = totalNetworkRevenue * SM_RECURRING_LIFT;
+
+      // 6. Lead conversion improvement
+      const nonRecurringRevenue = totalNetworkRevenue * (1 - recurringRate);
+      const leadConversionValue = nonRecurringRevenue * SM_LEAD_CONVERSION_LIFT;
+
+      // 7. Revenue lift from faster ramp
+      const weeksSaved = onboardWeeks * SM_RAMP_SAVINGS;
+      const weeklyRevenuePerLocation = avgRevenue / WEEKS_PER_YEAR;
+      const rampRevenueLift = newLocations * weeksSaved * weeklyRevenuePerLocation;
+
+      // === Tier 3: Strategic & Investor-Facing ===
+
+      // 8. Payback period
+      const monthlyBenefit = totalHardDollar / MONTHS_PER_YEAR;
+      const paybackMonths = monthlyBenefit > 0 ? smAnnualCost / (totalHardDollar / 1) * MONTHS_PER_YEAR : Infinity;
+      // Simpler: payback = cost / monthly-benefit
+      const payback = monthlyBenefit > 0 ? smAnnualCost / monthlyBenefit : Infinity;
+
+      // 9. 3-year net ROI
+      const threeYearBenefit = totalHardDollar * 3;
+      const threeYearCost = smAnnualCost * 3;
+      const threeYearNetROI = threeYearCost > 0 ? ((threeYearBenefit - threeYearCost) / threeYearCost) * 100 : 0;
+
+      // 10. Scalability readiness
+      const scalabilityScore = calcScalabilityScore(techConsolidationSavings, royaltyManual, newLocations, numLocations);
+
+      // === Render Outputs ===
+
+      // Summary banner
+      $('sumHours').textContent = fmtNum(adminHoursSaved);
+      $('sumDollars').textContent = fmt(totalHardDollar);
+      $('sumROI').textContent = fmtPct(threeYearNetROI);
+
+      // Tier 1
+      $('t1Hours').textContent = fmtNum(adminHoursSaved);
+      $('t1TimeDollars').textContent = fmt(totalTimeDollarsSaved);
+      $('t1TechSavings').textContent = fmt(techConsolidationSavings);
+      $('t1OnboardSavings').textContent = fmt(totalOnboardSavings);
+
+      // Tier 2
+      $('t2RecurringRisk').textContent = fmt(recurringRevenueAtRisk);
+      $('t2LeadConversion').textContent = fmt(leadConversionValue);
+      $('t2RampLift').textContent = fmt(rampRevenueLift);
+
+      // Tier 3
+      if (payback === Infinity || payback < 0) {
+        $('t3Payback').textContent = 'N/A';
+      } else if (payback < 1) {
+        $('t3Payback').textContent = '< 1 month';
       } else {
-        setKPI('kpiPayback', paybackMonths.toFixed(1) + ' months', 'Payback Period', paybackMonths <= months ? 'positive' : 'negative');
+        $('t3Payback').textContent = payback.toFixed(1) + ' mo';
       }
+      $('t3ROI').textContent = fmtPct(threeYearNetROI);
 
-      setKPI('kpiTimeSaved', Math.round(hoursSavedPerYear).toLocaleString(), 'Hours Saved / Year', 'positive');
-
-      // Show results
-      $('results').classList.remove('hidden');
+      // Scalability gauge
+      renderGauge(scalabilityScore);
 
       // Charts
-      renderCharts(labels, cumCurrent, cumSaaS, monthlySavingsData);
+      renderCharts(numLocations, adminHoursWeek, loadedCostHour, monthlyTechSpend, smAnnualCost, totalHardDollar);
+
+      // Breakdown table
+      renderBreakdown({
+        adminHoursSaved, adminDollarsSaved, corpHoursSaved, corpDollarsSaved,
+        totalTimeDollarsSaved, techConsolidationSavings, totalOnboardSavings,
+        onboardSavingsPerLocation, newLocations, ticketSavings, royaltySavings,
+        recurringRevenueAtRisk, leadConversionValue, rampRevenueLift,
+        totalHardDollar, numLocations, adminHoursWeek, loadedCostHour,
+        corpDataHours, onboardWeeks, supportTickets, monthlyTechSpend,
+        smAnnualCost, avgRevenue, weeksSaved, recurringRate
+      });
     }
 
-    function renderCharts(labels, cumCurrent, cumSaaS, monthlySavingsData) {
+    // --- Scalability Readiness Score ---
+    function calcScalabilityScore(techConsolidationSavings, royaltyManual, newLocations, numLocations) {
+      let score = 0;
+
+      // Single platform consolidation (25 pts)
+      score += techConsolidationSavings > 0 ? 25 : 10;
+
+      // Onboarding speed improvement (20 pts)
+      score += Math.round(SM_ONBOARD_REDUCTION * 20);
+
+      // Data centralization (20 pts)
+      score += Math.round(SM_CORP_DATA_REDUCTION * 20);
+
+      // Automated royalty collection (15 pts)
+      score += royaltyManual ? 15 : 5;
+
+      // Support ticket reduction (10 pts)
+      score += Math.round(SM_SUPPORT_REDUCTION * 10);
+
+      // Growth trajectory (10 pts)
+      const growthRate = numLocations > 0 ? newLocations / numLocations : 0;
+      score += Math.min(10, Math.round(growthRate * 30));
+
+      return Math.min(100, score);
+    }
+
+    function renderGauge(score) {
+      const fill = $('gaugeFill');
+      fill.style.width = score + '%';
+
+      let color, rating;
+      if (score >= 80) { color = var_green(); rating = 'Investor-Ready'; }
+      else if (score >= 60) { color = var_blue(); rating = 'Strong Foundation'; }
+      else if (score >= 40) { color = var_amber(); rating = 'Moderate \u2014 Gaps Remain'; }
+      else { color = var_red(); rating = 'Significant Infrastructure Risk'; }
+
+      fill.style.background = color;
+      $('gaugeScore').textContent = score + ' / 100';
+      $('gaugeScore').style.color = color;
+      $('gaugeRating').textContent = rating;
+      $('gaugeRating').style.color = color;
+    }
+
+    function var_green() { return '#10b981'; }
+    function var_blue() { return '#3b82f6'; }
+    function var_amber() { return '#f59e0b'; }
+    function var_red() { return '#ef4444'; }
+
+    // --- Charts ---
+    function renderCharts(numLocations, adminHoursWeek, loadedCostHour, monthlyTechSpend, smAnnualCost, totalHardDollarAnnual) {
+      const months = 36;
+      const labels = [];
+      const cumCurrent = [];
+      const cumSM = [];
+      const monthlyNet = [];
+
+      const weeksPerMonth = WEEKS_PER_YEAR / MONTHS_PER_YEAR;
+      const monthlyCurrentLabor = numLocations * adminHoursWeek * loadedCostHour * weeksPerMonth;
+      const monthlyCurrentTotal = monthlyCurrentLabor + monthlyTechSpend;
+
+      const monthlySmCost = smAnnualCost / MONTHS_PER_YEAR;
+      const monthlyResidualLabor = monthlyCurrentLabor * (1 - SM_ADMIN_REDUCTION);
+      const monthlySmTotal = monthlyResidualLabor + monthlySmCost;
+
+      let cumCurrentVal = 0;
+      let cumSmVal = 0;
+
+      for (let m = 1; m <= months; m++) {
+        labels.push(m <= 12 ? 'Mo ' + m : (m <= 24 ? 'Yr2 M' + (m - 12) : 'Yr3 M' + (m - 24)));
+        cumCurrentVal += monthlyCurrentTotal;
+        cumSmVal += monthlySmTotal;
+        cumCurrent.push(Math.round(cumCurrentVal));
+        cumSM.push(Math.round(cumSmVal));
+        monthlyNet.push(Math.round(monthlyCurrentTotal - monthlySmTotal));
+      }
+
       const sharedOptions = {
         responsive: true,
         interaction: { intersect: false, mode: 'index' },
-        plugins: { legend: { position: 'bottom' } },
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
         scales: {
-          y: {
-            ticks: {
-              callback: v => '$' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v)
-            }
-          }
+          y: { ticks: { callback: v => v >= 1000000 ? '$' + (v / 1000000).toFixed(1) + 'M' : v >= 1000 ? '$' + (v / 1000).toFixed(0) + 'k' : '$' + v } }
         }
       };
 
-      // Cost comparison chart
       if (costChart) costChart.destroy();
       costChart = new Chart($('costChart'), {
         type: 'line',
         data: {
           labels,
           datasets: [
-            {
-              label: 'Current Solution',
-              data: cumCurrent,
-              borderColor: '#ef4444',
-              backgroundColor: 'rgba(239,68,68,0.08)',
-              fill: true,
-              tension: 0.3,
-              pointRadius: 2,
-            },
-            {
-              label: 'ServiceMinder',
-              data: cumSaaS,
-              borderColor: '#4f46e5',
-              backgroundColor: 'rgba(79,70,229,0.08)',
-              fill: true,
-              tension: 0.3,
-              pointRadius: 2,
-            }
+            { label: 'Current Tech Stack', data: cumCurrent, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.06)', fill: true, tension: 0.3, pointRadius: 0 },
+            { label: 'ServiceMinder', data: cumSM, borderColor: '#4f46e5', backgroundColor: 'rgba(79,70,229,0.06)', fill: true, tension: 0.3, pointRadius: 0 }
           ]
         },
-        options: sharedOptions,
+        options: sharedOptions
       });
 
-      // Monthly savings chart
       if (savingsChart) savingsChart.destroy();
       savingsChart = new Chart($('savingsChart'), {
         type: 'bar',
         data: {
           labels,
           datasets: [{
-            label: 'Monthly Savings',
-            data: monthlySavingsData,
-            backgroundColor: monthlySavingsData.map(v => v >= 0 ? 'rgba(16,185,129,0.7)' : 'rgba(239,68,68,0.7)'),
-            borderRadius: 4,
+            label: 'Monthly Net Benefit',
+            data: monthlyNet,
+            backgroundColor: monthlyNet.map(v => v >= 0 ? 'rgba(16,185,129,0.65)' : 'rgba(239,68,68,0.65)'),
+            borderRadius: 3
           }]
         },
-        options: {
-          ...sharedOptions,
-          plugins: {
-            ...sharedOptions.plugins,
-            legend: { display: false },
-          }
-        },
+        options: { ...sharedOptions, plugins: { ...sharedOptions.plugins, legend: { display: false } } }
       });
     }
 
-    // Auto-calculate on load
+    // --- Breakdown Table ---
+    function renderBreakdown(d) {
+      const rows = [
+        { tier: 'Hard Dollar Savings' },
+        { item: 'Admin time saved (franchisee-level)', val: d.adminDollarsSaved, basis: `${fmtNum(d.numLocations)} locations \u00D7 ${d.adminHoursWeek} hrs/wk \u00D7 60% reduction \u00D7 52 wks \u00D7 $${d.loadedCostHour}/hr` },
+        { item: 'Corporate data management time saved', val: d.corpDollarsSaved, basis: `${d.corpDataHours} hrs/wk \u00D7 70% reduction \u00D7 52 wks \u00D7 $${CORP_HOURLY_RATE}/hr` },
+        { item: 'Tech consolidation savings', val: d.techConsolidationSavings, basis: `$${fmtNum(d.monthlyTechSpend)}/mo current \u2212 $${fmtNum(d.smAnnualCost)}/yr ServiceMinder` },
+        { item: 'Onboarding cost reduction', val: d.totalOnboardSavings, basis: `${fmtNum(d.newLocations)} new locations \u00D7 $${fmtNum(d.onboardSavingsPerLocation)} saved each (65% faster)` },
+        { item: 'Support ticket reduction', val: d.ticketSavings, basis: `${fmtNum(d.supportTickets)} tickets/mo \u00D7 50% reduction \u00D7 $${SUPPORT_COST_PER_TICKET}/ticket \u00D7 12 mo` },
+        { item: 'Royalty processing automation', val: d.royaltySavings, basis: d.royaltySavings > 0 ? `${ROYALTY_PROCESSING_HOURS_MONTH} hrs/mo \u00D7 $${CORP_HOURLY_RATE}/hr \u00D7 12 mo` : 'Already automated' },
+
+        { tier: 'Revenue Protection & Growth' },
+        { item: 'Recurring revenue opportunity', val: d.recurringRevenueAtRisk, basis: `${fmtNum(d.numLocations)} locations \u00D7 $${fmtNum(d.avgRevenue)}/yr \u00D7 15% recurring lift` },
+        { item: 'Lead conversion improvement', val: d.leadConversionValue, basis: `Non-recurring revenue \u00D7 10% conversion lift (conservative benchmark)` },
+        { item: 'Revenue lift from faster ramp', val: d.rampRevenueLift, basis: `${fmtNum(d.newLocations)} new locations \u00D7 ${d.weeksSaved.toFixed(1)} wks earlier \u00D7 $${fmtNum(Math.round(d.avgRevenue / WEEKS_PER_YEAR))}/wk` },
+
+        { total: true, item: 'Total Annual Hard-Dollar Savings', val: d.totalHardDollar },
+        { total: true, item: 'ServiceMinder Annual Cost', val: -d.smAnnualCost },
+        { total: true, item: 'Net Annual Benefit (Hard Dollars)', val: d.totalHardDollar - d.smAnnualCost },
+      ];
+
+      const tbody = $('breakdownBody');
+      tbody.innerHTML = '';
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        if (r.tier) {
+          tr.className = 'row-tier';
+          tr.innerHTML = `<td colspan="3">${r.tier}</td>`;
+        } else if (r.total) {
+          tr.className = 'row-total';
+          tr.innerHTML = `<td>${r.item}</td><td class="val">${fmtFull(r.val)}</td><td></td>`;
+        } else {
+          tr.innerHTML = `<td>${r.item}</td><td class="val">${fmtFull(r.val)}</td><td class="basis">${r.basis}</td>`;
+        }
+        tbody.appendChild(tr);
+      });
+    }
+
+    // --- PDF Export ---
+    function shareResults() {
+      const el = $('results');
+
+      // Add temporary PDF header
+      const pdfHeader = document.createElement('div');
+      pdfHeader.style.cssText = 'text-align:center;padding:1.5rem 0 1rem;';
+      pdfHeader.innerHTML = '<h2 style="color:#4f46e5;margin-bottom:0.25rem;">ServiceMinder ROI Analysis</h2><p style="color:#64748b;font-size:0.85rem;">Prepared ' + new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + '</p>';
+      el.prepend(pdfHeader);
+
+      // Open the breakdown for PDF
+      const details = el.querySelector('details');
+      const wasOpen = details.open;
+      details.open = true;
+
+      // Hide action buttons temporarily
+      const actions = el.querySelector('.actions');
+      actions.style.display = 'none';
+
+      html2pdf().set({
+        margin: [0.4, 0.4, 0.4, 0.4],
+        filename: 'ServiceMinder-ROI-Analysis.pdf',
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      }).from(el).save().then(() => {
+        pdfHeader.remove();
+        details.open = wasOpen;
+        actions.style.display = '';
+      });
+    }
+
+    // --- Reset ---
+    function resetDefaults() {
+      Object.entries(DEFAULTS).forEach(([id, val]) => {
+        const el = $(id);
+        if (el.type === 'checkbox') el.checked = val;
+        else el.value = val;
+      });
+      calculate();
+    }
+
+    // --- Auto-calculate on input change ---
+    let debounceTimer;
+    function onInput() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(calculate, 100);
+    }
+
+    document.querySelectorAll('input[type="number"]').forEach(el => el.addEventListener('input', onInput));
+    $('royaltyManual').addEventListener('change', onInput);
+
+    // --- Initialize ---
     calculate();
   </script>
 </body>
