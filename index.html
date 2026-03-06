@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SaaS ROI Calculator</title>
+  <title>ServiceMinder ROI Calculator</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -180,8 +180,8 @@
 </head>
 <body>
   <header>
-    <h1>SaaS ROI Calculator</h1>
-    <p>Estimate the return on investment of switching to a SaaS solution</p>
+    <h1>ServiceMinder ROI Calculator</h1>
+    <p>Estimate the return on investment of switching to ServiceMinder</p>
   </header>
 
   <div class="container">
@@ -196,7 +196,7 @@
         <div class="field">
           <label for="hoursPerWeek">Hours Spent per User per Week</label>
           <input type="number" id="hoursPerWeek" value="5" min="0" step="0.5">
-          <div class="hint">On the task the SaaS would automate or streamline</div>
+          <div class="hint">On the task ServiceMinder would automate or streamline</div>
         </div>
         <div class="field">
           <label for="hourlyRate">Average Hourly Cost ($)</label>
@@ -210,11 +210,11 @@
         </div>
       </div>
 
-      <!-- SaaS Costs -->
+      <!-- ServiceMinder Costs -->
       <div class="card">
-        <h2>New SaaS Solution</h2>
+        <h2>ServiceMinder</h2>
         <div class="field">
-          <label for="saasMonthly">SaaS Subscription ($/month)</label>
+          <label for="saasMonthly">ServiceMinder Subscription ($/month)</label>
           <input type="number" id="saasMonthly" value="2000" min="0" step="10">
         </div>
         <div class="field">
@@ -225,7 +225,7 @@
         <div class="field">
           <label for="timeSavedPct">Estimated Time Savings (%)</label>
           <input type="number" id="timeSavedPct" value="60" min="0" max="100" step="5">
-          <div class="hint">How much of the current manual time will the SaaS eliminate?</div>
+          <div class="hint">How much of the current manual time will ServiceMinder eliminate?</div>
         </div>
         <div class="field">
           <label for="timeframe">Analysis Timeframe (months)</label>
@@ -375,7 +375,7 @@
               pointRadius: 2,
             },
             {
-              label: 'SaaS Solution',
+              label: 'ServiceMinder',
               data: cumSaaS,
               borderColor: '#4f46e5',
               backgroundColor: 'rgba(79,70,229,0.08)',
