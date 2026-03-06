@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SaaS ROI Calculator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --primary: #4f46e5;
+      --primary-light: #e0e7ff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --green: #10b981;
+      --red: #ef4444;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 2rem 1rem;
+      text-align: center;
+    }
+
+    header h1 { font-size: 1.75rem; font-weight: 700; }
+    header p { opacity: 0.85; margin-top: 0.25rem; font-size: 0.95rem; }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+
+    @media (max-width: 768px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    .card h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      color: var(--primary);
+    }
+
+    .field { margin-bottom: 1rem; }
+
+    .field label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      color: var(--text);
+      transition: border-color 0.2s;
+    }
+
+    .field input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    .hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    button.calc-btn {
+      width: 100%;
+      padding: 0.75rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      transition: background 0.2s;
+    }
+
+    button.calc-btn:hover { background: #4338ca; }
+
+    /* Results */
+    .results { margin-top: 2rem; }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .kpi {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .kpi .value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 0.15rem;
+    }
+
+    .kpi .label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .kpi.positive .value { color: var(--green); }
+    .kpi.negative .value { color: var(--red); }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+
+    @media (max-width: 768px) {
+      .charts-grid { grid-template-columns: 1fr; }
+    }
+
+    .chart-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .chart-card h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--text);
+    }
+
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>SaaS ROI Calculator</h1>
+    <p>Estimate the return on investment of switching to a SaaS solution</p>
+  </header>
+
+  <div class="container">
+    <div class="grid">
+      <!-- Current Costs -->
+      <div class="card">
+        <h2>Current Costs</h2>
+        <div class="field">
+          <label for="numEmployees">Number of Employees / Users</label>
+          <input type="number" id="numEmployees" value="10" min="1">
+        </div>
+        <div class="field">
+          <label for="hoursPerWeek">Hours Spent per User per Week</label>
+          <input type="number" id="hoursPerWeek" value="5" min="0" step="0.5">
+          <div class="hint">On the task the SaaS would automate or streamline</div>
+        </div>
+        <div class="field">
+          <label for="hourlyRate">Average Hourly Cost ($)</label>
+          <input type="number" id="hourlyRate" value="50" min="0" step="1">
+          <div class="hint">Fully loaded employee cost (salary + benefits + overhead)</div>
+        </div>
+        <div class="field">
+          <label for="currentToolCost">Current Tool / Process Cost ($/month)</label>
+          <input type="number" id="currentToolCost" value="500" min="0" step="10">
+          <div class="hint">Existing software licenses, maintenance, etc.</div>
+        </div>
+      </div>
+
+      <!-- SaaS Costs -->
+      <div class="card">
+        <h2>New SaaS Solution</h2>
+        <div class="field">
+          <label for="saasMonthly">SaaS Subscription ($/month)</label>
+          <input type="number" id="saasMonthly" value="2000" min="0" step="10">
+        </div>
+        <div class="field">
+          <label for="implementationCost">One-Time Implementation Cost ($)</label>
+          <input type="number" id="implementationCost" value="5000" min="0" step="100">
+          <div class="hint">Setup, migration, training, consulting fees</div>
+        </div>
+        <div class="field">
+          <label for="timeSavedPct">Estimated Time Savings (%)</label>
+          <input type="number" id="timeSavedPct" value="60" min="0" max="100" step="5">
+          <div class="hint">How much of the current manual time will the SaaS eliminate?</div>
+        </div>
+        <div class="field">
+          <label for="timeframe">Analysis Timeframe (months)</label>
+          <input type="number" id="timeframe" value="12" min="1" max="60" step="1">
+        </div>
+        <button class="calc-btn" onclick="calculate()">Calculate ROI</button>
+      </div>
+    </div>
+
+    <!-- Results Section -->
+    <div id="results" class="results hidden">
+      <div class="kpi-grid">
+        <div class="kpi" id="kpiROI"><div class="value">—</div><div class="label">ROI</div></div>
+        <div class="kpi" id="kpiSavings"><div class="value">—</div><div class="label">Net Savings</div></div>
+        <div class="kpi" id="kpiPayback"><div class="value">—</div><div class="label">Payback Period</div></div>
+        <div class="kpi" id="kpiTimeSaved"><div class="value">—</div><div class="label">Hours Saved / Year</div></div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3>Cumulative Cost Comparison</h3>
+          <canvas id="costChart"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Monthly Savings</h3>
+          <canvas id="savingsChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let costChart = null;
+    let savingsChart = null;
+
+    function $(id) { return document.getElementById(id); }
+    function num(id) { return parseFloat($(id).value) || 0; }
+    function fmt(n) { return n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }); }
+
+    function setKPI(id, value, label, cls) {
+      const el = $(id);
+      el.querySelector('.value').textContent = value;
+      if (label) el.querySelector('.label').textContent = label;
+      el.className = 'kpi' + (cls ? ' ' + cls : '');
+    }
+
+    function calculate() {
+      const employees = num('numEmployees');
+      const hoursPerWeek = num('hoursPerWeek');
+      const hourlyRate = num('hourlyRate');
+      const currentToolCost = num('currentToolCost');
+      const saasMonthly = num('saasMonthly');
+      const implementationCost = num('implementationCost');
+      const timeSavedPct = num('timeSavedPct') / 100;
+      const months = Math.max(1, Math.round(num('timeframe')));
+
+      // Monthly labor cost currently spent on the task
+      const weeksPerMonth = 52 / 12;
+      const monthlyLaborCost = employees * hoursPerWeek * hourlyRate * weeksPerMonth;
+
+      // Monthly labor saved
+      const monthlyLaborSaved = monthlyLaborCost * timeSavedPct;
+
+      // Monthly cost: current vs. SaaS
+      const monthlyCurrentTotal = monthlyLaborCost + currentToolCost;
+      const monthlySaaSTotal = (monthlyLaborCost - monthlyLaborSaved) + saasMonthly;
+
+      // Net monthly savings
+      const monthlySavings = monthlyCurrentTotal - monthlySaaSTotal;
+
+      // Build month-by-month data
+      const labels = [];
+      const cumCurrent = [];
+      const cumSaaS = [];
+      const monthlySavingsData = [];
+      let totalCurrentCost = 0;
+      let totalSaaSCost = implementationCost;
+
+      for (let m = 1; m <= months; m++) {
+        labels.push('Mo ' + m);
+        totalCurrentCost += monthlyCurrentTotal;
+        totalSaaSCost += monthlySaaSTotal;
+        cumCurrent.push(Math.round(totalCurrentCost));
+        cumSaaS.push(Math.round(totalSaaSCost));
+        monthlySavingsData.push(Math.round(monthlySavings));
+      }
+
+      const totalInvestment = implementationCost + (saasMonthly * months);
+      const netSavings = totalCurrentCost - totalSaaSCost;
+      const roi = totalInvestment > 0 ? (netSavings / totalInvestment) * 100 : 0;
+
+      // Payback period (months to recoup implementation cost)
+      let paybackMonths = monthlySavings > 0 ? implementationCost / monthlySavings : Infinity;
+
+      // Hours saved
+      const hoursSavedPerYear = employees * hoursPerWeek * timeSavedPct * 52;
+
+      // Update KPIs
+      setKPI('kpiROI', roi.toFixed(0) + '%', 'ROI', roi >= 0 ? 'positive' : 'negative');
+      setKPI('kpiSavings', fmt(netSavings), `Net Savings (${months}mo)`, netSavings >= 0 ? 'positive' : 'negative');
+
+      if (paybackMonths === Infinity || paybackMonths < 0) {
+        setKPI('kpiPayback', 'N/A', 'Payback Period', 'negative');
+      } else if (paybackMonths <= 1) {
+        setKPI('kpiPayback', '< 1 month', 'Payback Period', 'positive');
+      } else {
+        setKPI('kpiPayback', paybackMonths.toFixed(1) + ' months', 'Payback Period', paybackMonths <= months ? 'positive' : 'negative');
+      }
+
+      setKPI('kpiTimeSaved', Math.round(hoursSavedPerYear).toLocaleString(), 'Hours Saved / Year', 'positive');
+
+      // Show results
+      $('results').classList.remove('hidden');
+
+      // Charts
+      renderCharts(labels, cumCurrent, cumSaaS, monthlySavingsData);
+    }
+
+    function renderCharts(labels, cumCurrent, cumSaaS, monthlySavingsData) {
+      const sharedOptions = {
+        responsive: true,
+        interaction: { intersect: false, mode: 'index' },
+        plugins: { legend: { position: 'bottom' } },
+        scales: {
+          y: {
+            ticks: {
+              callback: v => '$' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v)
+            }
+          }
+        }
+      };
+
+      // Cost comparison chart
+      if (costChart) costChart.destroy();
+      costChart = new Chart($('costChart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Current Solution',
+              data: cumCurrent,
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239,68,68,0.08)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 2,
+            },
+            {
+              label: 'SaaS Solution',
+              data: cumSaaS,
+              borderColor: '#4f46e5',
+              backgroundColor: 'rgba(79,70,229,0.08)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 2,
+            }
+          ]
+        },
+        options: sharedOptions,
+      });
+
+      // Monthly savings chart
+      if (savingsChart) savingsChart.destroy();
+      savingsChart = new Chart($('savingsChart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Monthly Savings',
+            data: monthlySavingsData,
+            backgroundColor: monthlySavingsData.map(v => v >= 0 ? 'rgba(16,185,129,0.7)' : 'rgba(239,68,68,0.7)'),
+            borderRadius: 4,
+          }]
+        },
+        options: {
+          ...sharedOptions,
+          plugins: {
+            ...sharedOptions.plugins,
+            legend: { display: false },
+          }
+        },
+      });
+    }
+
+    // Auto-calculate on load
+    calculate();
+  </script>
+</body>
+</html>
