@@ -754,7 +754,7 @@
   <!-- ============ Header ============ -->
   <header>
     <h1>ServiceMinder ROI Calculator</h1>
-    <p>Build your franchise growth case &mdash; together</p>
+    <p>Build your franchise growth case</p>
   </header>
 
   <div class="container">
@@ -1041,7 +1041,7 @@
     </div><!-- /results -->
   </div><!-- /container -->
 
-  <div class="footer">ServiceMinder &mdash; The Operating System for Service Franchises</div>
+  <div class="footer">ServiceMinder: The Operating Platform for Home &amp; Commercial Services Franchises</div>
 
   <!-- ============ JavaScript ============ -->
   <script>
@@ -1083,7 +1083,8 @@
 
     // --- Fixed Constants ---
     const CORP_HOURLY_RATE = 55;
-    const SM_ANNUAL_COST_PER_LOCATION = 3000;
+    const SM_MONTHLY_COST_PER_LOCATION = 350;
+    const SM_ANNUAL_COST_PER_LOCATION = SM_MONTHLY_COST_PER_LOCATION * 12; // $4,200/yr
     const SUPPORT_COST_PER_TICKET = 35;
     const ROYALTY_PROCESSING_HOURS_MONTH = 12;
     const WEEKS_PER_YEAR = 52;
@@ -1453,7 +1454,7 @@
         { tier: 'Hard Dollar Savings' },
         { item: 'Admin time saved (franchisee-level)', val: d.adminDollarsSaved, low: low.adminDollarsSaved, high: high.adminDollarsSaved, basis: `${fmtNum(d.numLocations)} locations \u00D7 ${d.adminHoursWeek} hrs/wk \u00D7 ${Math.round(s.adminReduction * 100)}% reduction \u00D7 52 wks \u00D7 $${d.loadedCostHour}/hr` },
         { item: 'Corporate data management time saved', val: d.corpDollarsSaved, low: low.corpDollarsSaved, high: high.corpDollarsSaved, basis: `${d.corpDataHours} hrs/wk \u00D7 ${Math.round(s.corpDataReduction * 100)}% reduction \u00D7 52 wks \u00D7 $${CORP_HOURLY_RATE}/hr` },
-        { item: 'Tech consolidation savings', val: d.techConsolidationSavings, low: low.techConsolidationSavings, high: high.techConsolidationSavings, basis: `$${fmtNum(d.monthlyTechSpend)}/mo current \u2212 $${fmtNum(d.smAnnualCost)}/yr ServiceMinder` },
+        { item: 'Tech consolidation savings', val: d.techConsolidationSavings, low: low.techConsolidationSavings, high: high.techConsolidationSavings, basis: `$${fmtNum(d.monthlyTechSpend)}/mo current \u2212 $${SM_MONTHLY_COST_PER_LOCATION}/mo/location \u00D7 ${fmtNum(d.numLocations)} locations` },
         { item: 'Onboarding cost reduction', val: d.totalOnboardSavings, low: low.totalOnboardSavings, high: high.totalOnboardSavings, basis: `${fmtNum(d.newLocations)} new locations \u00D7 $${fmtNum(d.onboardSavingsPerLocation)} saved each (${Math.round(s.onboardReduction * 100)}% faster)` },
         { item: 'Support ticket reduction', val: d.ticketSavings, low: low.ticketSavings, high: high.ticketSavings, basis: `${fmtNum(d.supportTickets)} tickets/mo \u00D7 ${Math.round(s.supportReduction * 100)}% reduction \u00D7 $${SUPPORT_COST_PER_TICKET}/ticket \u00D7 12 mo` },
         { item: 'Royalty processing automation', val: d.royaltySavings, low: low.royaltySavings, high: high.royaltySavings, basis: d.royaltySavings > 0 ? `${ROYALTY_PROCESSING_HOURS_MONTH} hrs/mo \u00D7 $${CORP_HOURLY_RATE}/hr \u00D7 12 mo` : 'Already automated' },
