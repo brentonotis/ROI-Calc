@@ -747,7 +747,10 @@
       header, .input-grid, .tech-stack-section, .scenario-section, .actions, .footer, .brand-bar { display: none; }
       .summary-banner { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .pdf-only { display: block; }
-      .card, .kpi, .chart-card, .scalability-card { box-shadow: none; border: 1px solid #e2e8f0; }
+      .card, .kpi, .chart-card, .scalability-card { box-shadow: none; border: 1px solid #e2e8f0; break-inside: avoid; page-break-inside: avoid; }
+      .summary-banner, .kpi-grid, .assumptions-grid { break-inside: avoid; page-break-inside: avoid; }
+      .charts-grid { display: block; }
+      .chart-card { margin-bottom: 1rem; }
       .breakdown-section details { open: true; }
       .breakdown-section details[open] { break-inside: avoid; }
     }
@@ -1541,17 +1544,25 @@
       const actions = el.querySelector('.actions');
       actions.style.display = 'none';
 
+      // Stack charts vertically for PDF so each fits on a page
+      const chartsGrid = el.querySelector('.charts-grid');
+      const origGridDisplay = chartsGrid.style.display;
+      const origGridCols = chartsGrid.style.gridTemplateColumns;
+      chartsGrid.style.display = 'block';
+
       html2pdf().set({
         margin: [0.4, 0.4, 0.4, 0.4],
         filename: 'ServiceMinder-ROI-Analysis' + (brandName ? '-' + brandName.replace(/\s+/g, '-') : '') + '.pdf',
         image: { type: 'jpeg', quality: 0.95 },
         html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        pagebreak: { mode: ['css', 'legacy'] }
       }).from(el).save().then(() => {
         pdfHeader.remove();
         details.open = wasOpen;
         actions.style.display = '';
+        chartsGrid.style.display = origGridDisplay;
+        chartsGrid.style.gridTemplateColumns = origGridCols;
       });
     }
 
