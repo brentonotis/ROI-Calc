@@ -847,10 +847,10 @@
     <!-- ============ Tech Stack Itemizer ============ -->
     <div class="tech-stack-section">
       <h2>Technology Being Consolidated</h2>
-      <p class="section-hint">List the tools ServiceMinder would replace. This helps quantify consolidation savings and makes the business case concrete.</p>
+      <p class="section-hint">List what each franchisee pays per month for these tools. ServiceMinder replaces them at $350/location/month.</p>
       <div class="tech-item-header">
         <span>Tool / Platform</span>
-        <span>Monthly Cost</span>
+        <span>$/Location/Mo</span>
         <span></span>
       </div>
       <div id="techItems">
@@ -858,7 +858,7 @@
       </div>
       <div class="tech-stack-footer">
         <button class="add-tool-btn" onclick="addTechItem()">+ Add Tool</button>
-        <div class="tech-total">Total Monthly Tech Spend: <span id="techTotalDisplay">$0</span></div>
+        <div class="tech-total">Per Location: <span id="techTotalDisplay">$0</span> vs. ServiceMinder $350/mo</div>
       </div>
     </div>
 
@@ -1106,11 +1106,11 @@
 
     // --- Default Tech Stack ---
     const DEFAULT_TECH_STACK = [
-      { name: 'CRM / Customer Management', cost: 800 },
-      { name: 'Scheduling & Dispatch', cost: 600 },
-      { name: 'Invoicing & Payments', cost: 500 },
-      { name: 'Marketing / Email Platform', cost: 400 },
-      { name: 'Reporting & Analytics', cost: 300 },
+      { name: 'CRM / Customer Management', cost: 150 },
+      { name: 'Scheduling & Dispatch', cost: 100 },
+      { name: 'Invoicing & Payments', cost: 80 },
+      { name: 'Marketing / Email Platform', cost: 75 },
+      { name: 'Reporting & Analytics', cost: 50 },
     ];
 
     // --- Utility ---
@@ -1145,7 +1145,7 @@
       return items;
     }
 
-    function getMonthlyTechSpend() {
+    function getPerLocationMonthlyTechSpend() {
       return getTechItems().reduce((sum, item) => sum + item.cost, 0);
     }
 
@@ -1189,7 +1189,7 @@
     }
 
     function updateTechTotal() {
-      $('techTotalDisplay').textContent = fmtFull(getMonthlyTechSpend()) + '/mo';
+      $('techTotalDisplay').textContent = fmtFull(getPerLocationMonthlyTechSpend()) + '/mo';
     }
 
     function onTechChange() {
@@ -1226,7 +1226,8 @@
       const s = SCENARIOS[scenarioKey];
       const numLocations = Math.max(1, num('numLocations'));
       const newLocations = num('newLocations');
-      const monthlyTechSpend = getMonthlyTechSpend();
+      const perLocationMonthlyTech = getPerLocationMonthlyTechSpend();
+      const monthlyTechSpend = perLocationMonthlyTech * numLocations; // total across network
       const adminHoursWeek = num('adminHoursWeek');
       const loadedCostHour = num('loadedCostHour');
       const recurringRate = num('recurringRate') / 100;
@@ -1244,7 +1245,9 @@
       const totalTimeDollarsSaved = adminDollarsSaved + corpDollarsSaved;
 
       const smAnnualCost = numLocations * SM_ANNUAL_COST_PER_LOCATION;
-      const techConsolidationSavings = Math.max(0, (monthlyTechSpend * MONTHS_PER_YEAR) - smAnnualCost);
+      // Tech consolidation: per-location savings × locations × 12 months
+      const perLocationMonthlySavings = Math.max(0, perLocationMonthlyTech - SM_MONTHLY_COST_PER_LOCATION);
+      const techConsolidationSavings = perLocationMonthlySavings * numLocations * MONTHS_PER_YEAR;
 
       const currentOnboardCost = onboardWeeks * 40 * CORP_HOURLY_RATE;
       const smOnboardCost = currentOnboardCost * (1 - s.onboardReduction);
@@ -1278,7 +1281,7 @@
         onboardSavingsPerLocation, newLocations, ticketSavings, royaltySavings,
         recurringRevenueAtRisk, leadConversionValue, rampRevenueLift,
         totalHardDollar, numLocations, adminHoursWeek, loadedCostHour,
-        corpDataHours, onboardWeeks, supportTickets, monthlyTechSpend,
+        corpDataHours, onboardWeeks, supportTickets, monthlyTechSpend, perLocationMonthlyTech,
         smAnnualCost, avgRevenue, weeksSaved, recurringRate,
         payback, threeYearNetROI, royaltyManual, scenario: s
       };
@@ -1454,7 +1457,7 @@
         { tier: 'Hard Dollar Savings' },
         { item: 'Admin time saved (franchisee-level)', val: d.adminDollarsSaved, low: low.adminDollarsSaved, high: high.adminDollarsSaved, basis: `${fmtNum(d.numLocations)} locations \u00D7 ${d.adminHoursWeek} hrs/wk \u00D7 ${Math.round(s.adminReduction * 100)}% reduction \u00D7 52 wks \u00D7 $${d.loadedCostHour}/hr` },
         { item: 'Corporate data management time saved', val: d.corpDollarsSaved, low: low.corpDollarsSaved, high: high.corpDollarsSaved, basis: `${d.corpDataHours} hrs/wk \u00D7 ${Math.round(s.corpDataReduction * 100)}% reduction \u00D7 52 wks \u00D7 $${CORP_HOURLY_RATE}/hr` },
-        { item: 'Tech consolidation savings', val: d.techConsolidationSavings, low: low.techConsolidationSavings, high: high.techConsolidationSavings, basis: `$${fmtNum(d.monthlyTechSpend)}/mo current \u2212 $${SM_MONTHLY_COST_PER_LOCATION}/mo/location \u00D7 ${fmtNum(d.numLocations)} locations` },
+        { item: 'Tech consolidation savings', val: d.techConsolidationSavings, low: low.techConsolidationSavings, high: high.techConsolidationSavings, basis: `($${fmtNum(d.perLocationMonthlyTech)}/mo \u2212 $${SM_MONTHLY_COST_PER_LOCATION}/mo SM) \u00D7 ${fmtNum(d.numLocations)} locations \u00D7 12 mo` },
         { item: 'Onboarding cost reduction', val: d.totalOnboardSavings, low: low.totalOnboardSavings, high: high.totalOnboardSavings, basis: `${fmtNum(d.newLocations)} new locations \u00D7 $${fmtNum(d.onboardSavingsPerLocation)} saved each (${Math.round(s.onboardReduction * 100)}% faster)` },
         { item: 'Support ticket reduction', val: d.ticketSavings, low: low.ticketSavings, high: high.ticketSavings, basis: `${fmtNum(d.supportTickets)} tickets/mo \u00D7 ${Math.round(s.supportReduction * 100)}% reduction \u00D7 $${SUPPORT_COST_PER_TICKET}/ticket \u00D7 12 mo` },
         { item: 'Royalty processing automation', val: d.royaltySavings, low: low.royaltySavings, high: high.royaltySavings, basis: d.royaltySavings > 0 ? `${ROYALTY_PROCESSING_HOURS_MONTH} hrs/mo \u00D7 $${CORP_HOURLY_RATE}/hr \u00D7 12 mo` : 'Already automated' },
