@@ -92,14 +92,11 @@
     /* ============ Input Grid (3 columns) ============ */
     .input-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 1.5rem;
       margin-bottom: 1.5rem;
     }
 
-    @media (max-width: 1024px) {
-      .input-grid { grid-template-columns: 1fr 1fr; }
-    }
     @media (max-width: 700px) {
       .input-grid { grid-template-columns: 1fr; }
     }
@@ -213,6 +210,16 @@
     }
     .toggle input:checked + .slider { background: var(--primary); }
     .toggle input:checked + .slider::before { transform: translateX(20px); }
+
+    /* Surcharge sub-fields */
+    .surcharge-fields {
+      margin-top: 0.5rem;
+      padding: 0.75rem;
+      background: var(--primary-light);
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+    .surcharge-fields.hidden { display: none; }
 
     /* ============ Tech Stack Itemizer ============ */
     .tech-stack-section {
@@ -849,6 +856,86 @@
           </label>
         </div>
       </div>
+
+      <!-- Bucket 4: Payment Volume & Mix -->
+      <div class="card">
+        <h2>Payment Processing</h2>
+        <div class="field">
+          <label for="monthlyVolume">Avg Monthly Payment Volume / Location</label>
+          <div class="input-wrap">
+            <span class="prefix">$</span>
+            <input type="number" id="monthlyVolume" value="85000" min="0" step="1000" class="has-prefix">
+          </div>
+          <div class="hint">Total monthly revenue collected through payment processing</div>
+        </div>
+        <div class="field">
+          <label for="avgTicket">Average Ticket Size</label>
+          <div class="input-wrap">
+            <span class="prefix">$</span>
+            <input type="number" id="avgTicket" value="275" min="1" step="5" class="has-prefix">
+          </div>
+        </div>
+        <div class="field">
+          <label for="cardPct">% of Payments by Credit / Debit Card</label>
+          <div class="input-wrap">
+            <input type="number" id="cardPct" value="70" min="0" max="100" step="1" class="has-suffix">
+            <span class="suffix">%</span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="achPct">% of Payments by ACH</label>
+          <div class="input-wrap">
+            <input type="number" id="achPct" value="30" min="0" max="100" step="1" class="has-suffix">
+            <span class="suffix">%</span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="currentCardRate">Current Avg Card Processing Rate</label>
+          <div class="input-wrap">
+            <input type="number" id="currentCardRate" value="3.5" min="0" max="10" step="0.1" class="has-suffix">
+            <span class="suffix">%</span>
+          </div>
+          <div class="hint">If unsure, 3.5% is a typical blended rate</div>
+        </div>
+        <div class="field">
+          <label for="currentAchFee">Current ACH Fee per Transaction</label>
+          <div class="input-wrap">
+            <span class="prefix">$</span>
+            <input type="number" id="currentAchFee" value="3.00" min="0" step="0.25" class="has-prefix">
+          </div>
+        </div>
+        <div class="field">
+          <label for="currentPlatformFees">Monthly Processor / Gateway Fees per Location</label>
+          <div class="input-wrap">
+            <span class="prefix">$</span>
+            <input type="number" id="currentPlatformFees" value="50" min="0" step="5" class="has-prefix">
+          </div>
+          <div class="hint">Monthly gateway, PCI, statement, or platform fees</div>
+        </div>
+        <div class="field">
+          <label for="pmtReconHours">Monthly Admin Hours Reconciling Payments / Location</label>
+          <input type="number" id="pmtReconHours" value="8" min="0" step="1">
+          <div class="hint">Matching payments to invoices, deposits, chargebacks</div>
+        </div>
+        <div class="toggle-row" style="margin-top: 0.25rem;">
+          <span class="toggle-label">Enable Surcharge</span>
+          <label class="toggle">
+            <input type="checkbox" id="surchargeEnabled">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="hint" style="margin-bottom: 0.25rem;">Pass credit card fees to customers</div>
+        <div id="surchargeFields" class="surcharge-fields hidden">
+          <div class="field" style="margin-bottom:0;">
+            <label for="surchargeEligiblePct">% of Card Txns Eligible for Surcharge</label>
+            <div class="input-wrap">
+              <input type="number" id="surchargeEligiblePct" value="85" min="0" max="100" step="1" class="has-suffix">
+              <span class="suffix">%</span>
+            </div>
+            <div class="hint">Typically 80&ndash;90% of card transactions</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ============ Tech Stack Itemizer ============ -->
@@ -941,6 +1028,39 @@
             <div class="kpi-value" id="t1OnboardSavings">--</div>
             <div class="kpi-range" id="t1OnboardRange"></div>
             <div class="kpi-label">Onboarding Cost Reduction</div>
+          </div>
+          <div class="kpi green">
+            <div class="kpi-value" id="t1PayProcessing">--</div>
+            <div class="kpi-range" id="t1PayProcessingSub"></div>
+            <div class="kpi-label">Payment Processing Savings</div>
+          </div>
+          <div class="kpi green">
+            <div class="kpi-value" id="t1PayRecon">--</div>
+            <div class="kpi-range" id="t1PayReconSub"></div>
+            <div class="kpi-label">Payment Recon Savings</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Surcharge Revenue (conditional) -->
+      <div class="tier-section tier-1" id="surchargeTier" style="display:none;">
+        <div class="tier-header">
+          <h3>Recovered Credit Card Fees</h3>
+          <span class="tier-badge">Surcharge</span>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi green">
+            <div class="kpi-value" id="t1SurchargeTotal">--</div>
+            <div class="kpi-label">Annual Surcharge Revenue</div>
+          </div>
+          <div class="kpi green">
+            <div class="kpi-value" id="t1SurchargePerLoc">--</div>
+            <div class="kpi-label">Per Location / Year</div>
+          </div>
+          <div class="kpi green">
+            <div class="kpi-value" id="t1SurchargeEligible">--</div>
+            <div class="kpi-range" id="t1SurchargeEligibleSub"></div>
+            <div class="kpi-label">Eligible Card Volume</div>
           </div>
         </div>
       </div>
@@ -1097,6 +1217,13 @@
     const WEEKS_PER_YEAR = 52;
     const MONTHS_PER_YEAR = 12;
 
+    // --- SM | Pay Constants ---
+    const SM_CARD_RATE = 0.0299;      // 2.99% flat (includes Amex)
+    const SM_ACH_FEE = 0.75;          // $0.75 per ACH transaction
+    const SM_PLATFORM_FEES = 0;       // $0 monthly platform fees
+    const SM_ADMIN_REDUCTION = 0.50;  // 50% payment recon time reduction
+    const SM_SURCHARGE_RATE = 0.0299; // 2.99% surcharge rate
+
     // --- Default Values ---
     const DEFAULTS = {
       numLocations: 25,
@@ -1108,7 +1235,18 @@
       corpDataHours: 20,
       onboardWeeks: 8,
       supportTickets: 45,
-      royaltyManual: true
+      royaltyManual: true,
+      // Payment defaults
+      monthlyVolume: 85000,
+      avgTicket: 275,
+      cardPct: 70,
+      achPct: 30,
+      currentCardRate: 3.5,
+      currentAchFee: 3.00,
+      currentPlatformFees: 50,
+      pmtReconHours: 8,
+      surchargeEnabled: false,
+      surchargeEligiblePct: 85
     };
 
     // --- Default Tech Stack ---
@@ -1225,6 +1363,9 @@
         <div class="assumption-item"><span class="assumption-label">Recurring revenue lift</span><span class="assumption-value">${Math.round(s.recurringLift * 100)}%</span></div>
         <div class="assumption-item"><span class="assumption-label">Lead conversion lift</span><span class="assumption-value">${Math.round(s.leadConversionLift * 100)}%</span></div>
         <div class="assumption-item"><span class="assumption-label">Ramp time savings</span><span class="assumption-value">${Math.round(s.rampSavings * 100)}%</span></div>
+        <div class="assumption-item"><span class="assumption-label">SM|Pay card rate</span><span class="assumption-value">${(SM_CARD_RATE * 100).toFixed(2)}%</span></div>
+        <div class="assumption-item"><span class="assumption-label">SM|Pay ACH fee</span><span class="assumption-value">$${SM_ACH_FEE.toFixed(2)}</span></div>
+        <div class="assumption-item"><span class="assumption-label">Payment recon reduction</span><span class="assumption-value">${Math.round(SM_ADMIN_REDUCTION * 100)}%</span></div>
       `;
     }
 
@@ -1264,7 +1405,59 @@
       const ticketSavings = supportTickets * s.supportReduction * SUPPORT_COST_PER_TICKET * MONTHS_PER_YEAR;
       const royaltySavings = royaltyManual ? ROYALTY_PROCESSING_HOURS_MONTH * CORP_HOURLY_RATE * MONTHS_PER_YEAR : 0;
 
-      const totalHardDollar = totalTimeDollarsSaved + techConsolidationSavings + totalOnboardSavings + ticketSavings + royaltySavings;
+      // === Payment Processing Calculations ===
+      const monthlyVolume = num('monthlyVolume');
+      const avgTicket = Math.max(1, num('avgTicket'));
+      const cardPct = num('cardPct') / 100;
+      const achPct = num('achPct') / 100;
+      const currentCardRate = num('currentCardRate') / 100;
+      const currentAchFee = num('currentAchFee');
+      const currentPlatformFees = num('currentPlatformFees');
+      const pmtReconHours = num('pmtReconHours');
+      const surchargeEnabled = $('surchargeEnabled').checked;
+      const surchargeEligiblePct = num('surchargeEligiblePct') / 100;
+
+      // Transactions per location
+      const monthlyTransactions = monthlyVolume / avgTicket;
+
+      // Card and ACH mix
+      const cardVolume = monthlyVolume * cardPct;
+      const achVolume = monthlyVolume * achPct;
+      const achTransactions = achVolume / avgTicket;
+
+      // Current payment costs (per location, annual)
+      const currentCardCostAnnual = cardVolume * currentCardRate * 12;
+      const currentAchCostAnnual = achTransactions * currentAchFee * 12;
+      const currentPlatformFeesAnnual = currentPlatformFees * 12;
+      const totalCurrentPaymentCost = (currentCardCostAnnual + currentAchCostAnnual + currentPlatformFeesAnnual) * numLocations;
+
+      // SM | Pay costs (per location, annual)
+      const newCardCostAnnual = cardVolume * SM_CARD_RATE * 12;
+      const newAchCostAnnual = achTransactions * SM_ACH_FEE * 12;
+      const newPlatformFeesAnnual = SM_PLATFORM_FEES * 12;
+      const totalNewPaymentCost = (newCardCostAnnual + newAchCostAnnual + newPlatformFeesAnnual) * numLocations;
+
+      // Processing savings
+      const paymentProcessingSavings = totalCurrentPaymentCost - totalNewPaymentCost;
+
+      // Payment reconciliation savings
+      const pmtReconHoursSaved = pmtReconHours * SM_ADMIN_REDUCTION * 12; // per location per year
+      const pmtReconSavings = pmtReconHoursSaved * loadedCostHour * numLocations;
+
+      // Surcharge revenue
+      let surchargeRevenue = 0;
+      let surchargeRevenuePerLocation = 0;
+      let eligibleCardVolume = 0;
+      if (surchargeEnabled) {
+        eligibleCardVolume = cardVolume * surchargeEligiblePct;
+        surchargeRevenuePerLocation = eligibleCardVolume * SM_SURCHARGE_RATE * 12;
+        surchargeRevenue = surchargeRevenuePerLocation * numLocations;
+      }
+
+      // Total payment-related benefit
+      const totalPaymentBenefit = paymentProcessingSavings + pmtReconSavings + surchargeRevenue;
+
+      const totalHardDollar = totalTimeDollarsSaved + techConsolidationSavings + totalOnboardSavings + ticketSavings + royaltySavings + paymentProcessingSavings + pmtReconSavings + surchargeRevenue;
 
       // === Tier 2: Revenue Protection & Growth ===
       const totalNetworkRevenue = numLocations * avgRevenue;
@@ -1290,7 +1483,17 @@
         totalHardDollar, numLocations, adminHoursWeek, loadedCostHour,
         corpDataHours, onboardWeeks, supportTickets, monthlyTechSpend, perLocationMonthlyTech,
         smAnnualCost, avgRevenue, weeksSaved, recurringRate,
-        payback, threeYearNetROI, royaltyManual, scenario: s
+        payback, threeYearNetROI, royaltyManual, scenario: s,
+        // Payment data
+        monthlyVolume, avgTicket, cardPct, achPct, currentCardRate, currentAchFee,
+        currentPlatformFees, pmtReconHours,
+        monthlyTransactions, cardVolume, achVolume, achTransactions,
+        currentCardCostAnnual, currentAchCostAnnual, currentPlatformFeesAnnual,
+        totalCurrentPaymentCost, newCardCostAnnual, newAchCostAnnual,
+        totalNewPaymentCost, paymentProcessingSavings,
+        pmtReconHoursSaved, pmtReconSavings,
+        surchargeEnabled, surchargeEligiblePct, eligibleCardVolume,
+        surchargeRevenuePerLocation, surchargeRevenue, totalPaymentBenefit
       };
     }
 
@@ -1327,6 +1530,25 @@
 
       $('t1OnboardSavings').textContent = fmt(active.totalOnboardSavings);
       $('t1OnboardRange').textContent = `${fmtCompact(low.totalOnboardSavings)} \u2013 ${fmtCompact(high.totalOnboardSavings)}`;
+
+      // === Render Payment KPIs ===
+      $('t1PayProcessing').textContent = fmt(active.paymentProcessingSavings);
+      $('t1PayProcessingSub').textContent = `${(active.currentCardRate * 100).toFixed(1)}% \u2192 ${(SM_CARD_RATE * 100).toFixed(2)}% card rate`;
+
+      $('t1PayRecon').textContent = fmt(active.pmtReconSavings);
+      $('t1PayReconSub').textContent = `${fmtNum(active.pmtReconHoursSaved * active.numLocations)} hrs saved network-wide`;
+
+      // Surcharge section
+      const surchargeTier = $('surchargeTier');
+      if (active.surchargeEnabled) {
+        surchargeTier.style.display = '';
+        $('t1SurchargeTotal').textContent = fmt(active.surchargeRevenue);
+        $('t1SurchargePerLoc').textContent = fmt(active.surchargeRevenuePerLocation);
+        $('t1SurchargeEligible').textContent = fmt(active.eligibleCardVolume * 12 * active.numLocations);
+        $('t1SurchargeEligibleSub').textContent = `${Math.round(active.surchargeEligiblePct * 100)}% of card volume`;
+      } else {
+        surchargeTier.style.display = 'none';
+      }
 
       // === Render Tier 2 KPIs ===
       $('t2RecurringRisk').textContent = fmt(active.recurringRevenueAtRisk);
@@ -1446,6 +1668,9 @@
         { label: 'Onboarding Reduction', value: d.totalOnboardSavings, color: '#10b981' },
         { label: 'Support Ticket Savings', value: d.ticketSavings, color: '#f59e0b' },
         { label: 'Royalty Automation', value: d.royaltySavings, color: '#ef4444' },
+        { label: 'Payment Processing Savings', value: Math.max(0, d.paymentProcessingSavings), color: '#0ea5e9' },
+        { label: 'Payment Recon Savings', value: d.pmtReconSavings, color: '#14b8a6' },
+        ...(d.surchargeEnabled && d.surchargeRevenue > 0 ? [{ label: 'Recovered Card Fees (Surcharge)', value: d.surchargeRevenue, color: '#f97316' }] : []),
       ].filter(c => c.value > 0);
 
       if (breakdownChart) breakdownChart.destroy();
@@ -1492,6 +1717,18 @@
         { item: 'Support ticket reduction', val: d.ticketSavings, low: low.ticketSavings, high: high.ticketSavings, basis: `${fmtNum(d.supportTickets)} tickets/mo \u00D7 ${Math.round(s.supportReduction * 100)}% reduction \u00D7 $${SUPPORT_COST_PER_TICKET}/ticket \u00D7 12 mo` },
         { item: 'Royalty processing automation', val: d.royaltySavings, low: low.royaltySavings, high: high.royaltySavings, basis: d.royaltySavings > 0 ? `${ROYALTY_PROCESSING_HOURS_MONTH} hrs/mo \u00D7 $${CORP_HOURLY_RATE}/hr \u00D7 12 mo` : 'Already automated' },
 
+        { tier: 'Payment Processing Savings' },
+        { item: 'Card processing savings', val: d.paymentProcessingSavings > 0 ? (d.currentCardCostAnnual - d.newCardCostAnnual) * d.numLocations : 0, low: low.paymentProcessingSavings > 0 ? (low.currentCardCostAnnual - low.newCardCostAnnual) * low.numLocations : 0, high: high.paymentProcessingSavings > 0 ? (high.currentCardCostAnnual - high.newCardCostAnnual) * high.numLocations : 0, basis: `Card vol ${fmtCompact(d.cardVolume)}/mo \u00D7 (${(d.currentCardRate * 100).toFixed(1)}% \u2212 ${(SM_CARD_RATE * 100).toFixed(2)}%) \u00D7 12 mo \u00D7 ${fmtNum(d.numLocations)} loc` },
+        { item: 'ACH fee savings', val: (d.currentAchCostAnnual - d.newAchCostAnnual) * d.numLocations, low: (low.currentAchCostAnnual - low.newAchCostAnnual) * low.numLocations, high: (high.currentAchCostAnnual - high.newAchCostAnnual) * high.numLocations, basis: `${fmtNum(d.achTransactions)} ACH txns/mo \u00D7 ($${d.currentAchFee.toFixed(2)} \u2212 $${SM_ACH_FEE.toFixed(2)}) \u00D7 12 mo \u00D7 ${fmtNum(d.numLocations)} loc` },
+        { item: 'Platform/gateway fee savings', val: d.currentPlatformFeesAnnual * d.numLocations, low: low.currentPlatformFeesAnnual * low.numLocations, high: high.currentPlatformFeesAnnual * high.numLocations, basis: `$${d.currentPlatformFees}/mo \u00D7 12 mo \u00D7 ${fmtNum(d.numLocations)} loc (SM|Pay = $0)` },
+        { item: 'Payment reconciliation savings', val: d.pmtReconSavings, low: low.pmtReconSavings, high: high.pmtReconSavings, basis: `${d.pmtReconHours} hrs/mo \u00D7 50% reduction \u00D7 12 mo \u00D7 $${d.loadedCostHour}/hr \u00D7 ${fmtNum(d.numLocations)} loc` },
+      ];
+
+      if (d.surchargeEnabled) {
+        rows.push({ item: 'Recovered credit card fees (surcharge)', val: d.surchargeRevenue, low: low.surchargeRevenue, high: high.surchargeRevenue, basis: `${fmtCompact(d.eligibleCardVolume)}/mo eligible \u00D7 ${(SM_SURCHARGE_RATE * 100).toFixed(2)}% \u00D7 12 mo \u00D7 ${fmtNum(d.numLocations)} loc` });
+      }
+
+      rows.push(
         { tier: 'Revenue Protection & Growth' },
         { item: 'Recurring revenue opportunity', val: d.recurringRevenueAtRisk, low: low.recurringRevenueAtRisk, high: high.recurringRevenueAtRisk, basis: `${fmtNum(d.numLocations)} locations \u00D7 $${fmtNum(d.avgRevenue)}/yr \u00D7 ${Math.round(s.recurringLift * 100)}% recurring lift` },
         { item: 'Lead conversion improvement', val: d.leadConversionValue, low: low.leadConversionValue, high: high.leadConversionValue, basis: `Non-recurring revenue \u00D7 ${Math.round(s.leadConversionLift * 100)}% conversion lift` },
@@ -1500,7 +1737,7 @@
         { total: true, item: 'Total Annual Hard-Dollar Savings', val: d.totalHardDollar, low: low.totalHardDollar, high: high.totalHardDollar },
         { total: true, item: 'ServiceMinder Annual Cost', val: -d.smAnnualCost },
         { total: true, item: 'Net Annual Benefit (Hard Dollars)', val: d.totalHardDollar - d.smAnnualCost, low: low.totalHardDollar - low.smAnnualCost, high: high.totalHardDollar - high.smAnnualCost },
-      ];
+      );
 
       const tbody = $('breakdownBody');
       tbody.innerHTML = '';
@@ -1570,6 +1807,7 @@
     function resetDefaults() {
       Object.entries(DEFAULTS).forEach(([id, val]) => {
         const el = $(id);
+        if (!el) return;
         if (el.type === 'checkbox') el.checked = val;
         else el.value = val;
       });
@@ -1578,6 +1816,8 @@
       document.querySelectorAll('.scenario-pill').forEach(pill => {
         pill.classList.toggle('active', pill.dataset.scenario === 'moderate');
       });
+      // Reset surcharge visibility
+      toggleSurcharge();
       renderAssumptions();
       calculateAll();
     }
@@ -1591,6 +1831,19 @@
 
     document.querySelectorAll('input[type="number"]').forEach(el => el.addEventListener('input', onInput));
     $('royaltyManual').addEventListener('change', onInput);
+
+    // --- Surcharge Toggle ---
+    function toggleSurcharge() {
+      const enabled = $('surchargeEnabled').checked;
+      const fields = $('surchargeFields');
+      if (enabled) {
+        fields.classList.remove('hidden');
+      } else {
+        fields.classList.add('hidden');
+      }
+      onInput();
+    }
+    $('surchargeEnabled').addEventListener('change', toggleSurcharge);
 
     // --- Initialize ---
     renderTechItems(DEFAULT_TECH_STACK);
